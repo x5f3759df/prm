@@ -4,72 +4,6 @@ use std::env;
 use std::fs;
 use std::path::Path;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum CpuVariant {
-    X86_64,
-    V2,
-    V3,
-    V4,
-}
-
-impl CpuVariant {
-    pub fn detect() -> Self {
-        let Ok(cpuinfo) = fs::read_to_string("/proc/cpuinfo") else {
-            return CpuVariant::X86_64;
-        };
-        Self::from_cpuinfo(&cpuinfo)
-    }
-
-    pub fn from_cpuinfo(cpuinfo: &str) -> Self {
-        let Some(flags_line) = cpuinfo
-            .lines()
-            .find(|l| l.starts_with("flags") && l.contains(':'))
-        else {
-            return CpuVariant::X86_64;
-        };
-        let flags: Vec<&str> = flags_line.split_whitespace().collect();
-        let has = |f: &str| flags.contains(&f);
-
-        let v3 = has("avx2") && has("bmi1") && has("bmi2") && has("fma") && has("movbe");
-        let v4 = v3
-            && has("avx512f")
-            && has("avx512bw")
-            && has("avx512cd")
-            && has("avx512dq")
-            && has("avx512vl");
-
-        if v4 {
-            CpuVariant::V4
-        } else if v3 {
-            CpuVariant::V3
-        } else {
-            CpuVariant::X86_64
-        }
-    }
-
-    pub fn parse(s: &str) -> Result<Self, String> {
-        match s.to_lowercase().as_str() {
-            "v4" | "x86_64_v4" | "x86-64-v4" => Ok(CpuVariant::V4),
-            "v3" | "x86_64_v3" | "x86-64-v3" => Ok(CpuVariant::V3),
-            "v2" | "x86_64_v2" | "x86-64-v2" => Ok(CpuVariant::V2),
-            "v1" | "x86_64" | "x86-64" | "generic" => Ok(CpuVariant::X86_64),
-            other => Err(format!(
-                "Unknown CPU variant '{}'. Valid: v4, v3, v2, x86_64",
-                other
-            )),
-        }
-    }
-
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            CpuVariant::V4 => "x86_64_v4",
-            CpuVariant::V3 => "x86_64_v3",
-            CpuVariant::V2 => "x86_64_v2",
-            CpuVariant::X86_64 => "x86_64",
-        }
-    }
-}
-
 #[derive(Debug, Clone, Deserialize)]
 pub struct RunnerSourceConfig {
     #[serde(default)]
@@ -333,52 +267,23 @@ pub fn is_supported_archive(name: &str) -> bool {
         || lower.ends_with(".tar.zst"))
         && !lower.contains("arm64")
         && !lower.contains("aarch64")
+        && !lower.contains("x86_64_v")
+        && !lower.contains("x86-64-v")
 }
 
-fn asset_cpu_variant(name: &str) -> CpuVariant {
-    let lower = name.to_lowercase();
-    if lower.contains("x86_64_v4") || lower.contains("x86-64-v4") || lower.contains("-v4.") {
-        CpuVariant::V4
-    } else if lower.contains("x86_64_v3") || lower.contains("x86-64-v3") || lower.contains("-v3.") {
-        CpuVariant::V3
-    } else if lower.contains("x86_64_v2") || lower.contains("x86-64-v2") || lower.contains("-v2.") {
-        CpuVariant::V2
-    } else {
-        CpuVariant::X86_64
-    }
-}
-
-pub fn select_release_assets(
-    release: &ReleaseInfo,
-    target_variant: CpuVariant,
-) -> Result<SelectedReleaseAssets, String> {
-    let mut archives: Vec<&ReleaseAsset> = release
+pub fn select_release_assets(release: &ReleaseInfo) -> Result<SelectedReleaseAssets, String> {
+    let chosen = release
         .assets
         .iter()
-        .filter(|a| is_supported_archive(&a.name))
-        .collect();
+        .find(|a| is_supported_archive(&a.name))
+        .cloned()
+        .ok_or_else(|| {
+            format!(
+                "Release '{}' has no supported x86_64 archive (.tar.gz, .tar.xz, .tar.zst)",
+                release.tag_name
+            )
+        })?;
 
-    if archives.is_empty() {
-        return Err(format!(
-            "Release '{}' has no supported x86_64 archive (.tar.gz, .tar.xz, .tar.zst)",
-            release.tag_name
-        ));
-    }
-
-    archives.sort_by(|a, b| {
-        let va = asset_cpu_variant(&a.name);
-        let vb = asset_cpu_variant(&b.name);
-        let score = |v: CpuVariant| -> i32 {
-            if v <= target_variant {
-                100 + (v as i32) * 10
-            } else {
-                -(v as i32)
-            }
-        };
-        score(vb).cmp(&score(va))
-    });
-
-    let chosen = archives[0].clone();
     let stem = archive_stem(&chosen.name);
 
     let checksum = release
@@ -403,19 +308,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_cpuinfo_detection() {
-        let v4_cpu =
-            "flags\t\t: fpu avx2 bmi1 bmi2 fma movbe avx512f avx512bw avx512cd avx512dq avx512vl\n";
-        assert_eq!(CpuVariant::from_cpuinfo(v4_cpu), CpuVariant::V4);
-
-        let v3_cpu = "flags\t\t: fpu avx2 bmi1 bmi2 fma movbe\n";
-        assert_eq!(CpuVariant::from_cpuinfo(v3_cpu), CpuVariant::V3);
-
-        let v1_cpu = "flags\t\t: fpu sse2\n";
-        assert_eq!(CpuVariant::from_cpuinfo(v1_cpu), CpuVariant::X86_64);
-    }
-
-    #[test]
     fn test_missing_configs_throw_error_with_format_suggestion() {
         let missing_dir = Path::new("/tmp/prm-definitely-missing-config-dir-99999");
         let err_r = load_runners_config(missing_dir).unwrap_err();
@@ -432,14 +324,14 @@ mod tests {
     }
 
     #[test]
-    fn test_select_release_assets_prefers_best_variant() {
+    fn test_select_release_assets_picks_standard_x86_64() {
         let rel = ReleaseInfo {
             tag_name: "cachyos-10.0".into(),
             published_at: "2026-10-01".into(),
             assets: vec![
                 ReleaseAsset {
-                    name: "proton-cachyos-10.0-x86_64.tar.xz".into(),
-                    download_url: "http://local/v1.tar.xz".into(),
+                    name: "proton-cachyos-10.0-arm64.tar.xz".into(),
+                    download_url: "http://local/arm64.tar.xz".into(),
                     size: 100,
                 },
                 ReleaseAsset {
@@ -448,26 +340,20 @@ mod tests {
                     size: 100,
                 },
                 ReleaseAsset {
-                    name: "proton-cachyos-10.0-x86_64_v3.tar.xz.sha512sum".into(),
-                    download_url: "http://local/v3.sha512sum".into(),
-                    size: 128,
+                    name: "proton-cachyos-10.0-x86_64.tar.xz".into(),
+                    download_url: "http://local/v1.tar.xz".into(),
+                    size: 100,
                 },
                 ReleaseAsset {
-                    name: "proton-cachyos-10.0-x86_64_v4.tar.xz".into(),
-                    download_url: "http://local/v4.tar.xz".into(),
-                    size: 100,
+                    name: "proton-cachyos-10.0-x86_64.tar.xz.sha512sum".into(),
+                    download_url: "http://local/v1.sha512sum".into(),
+                    size: 128,
                 },
             ],
         };
 
-        let sel_v3 = select_release_assets(&rel, CpuVariant::V3).unwrap();
-        assert_eq!(sel_v3.archive.name, "proton-cachyos-10.0-x86_64_v3.tar.xz");
-        assert!(sel_v3.checksum.is_some());
-
-        let sel_v4 = select_release_assets(&rel, CpuVariant::V4).unwrap();
-        assert_eq!(sel_v4.archive.name, "proton-cachyos-10.0-x86_64_v4.tar.xz");
-
-        let sel_v1 = select_release_assets(&rel, CpuVariant::X86_64).unwrap();
-        assert_eq!(sel_v1.archive.name, "proton-cachyos-10.0-x86_64.tar.xz");
+        let sel = select_release_assets(&rel).unwrap();
+        assert_eq!(sel.archive.name, "proton-cachyos-10.0-x86_64.tar.xz");
+        assert!(sel.checksum.is_some());
     }
 }

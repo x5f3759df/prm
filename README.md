@@ -13,7 +13,6 @@ All upstream API URLs and source definitions live in a plain-text JSON configura
 ## Features
 
 - **Zero External Runtime Dependencies**: Pure-Rust HTTPS (`ureq` + `rustls`), checksum verification (`sha2`), and `.tar.gz` / `.tar.xz` / `.tar.zst` archive extraction.
-- **CPU Micro-Architecture Auto-Detection**: Reads CPU feature flags (`avx512*`, `avx2`, `bmi2`, `fma`) to automatically pick the best matching build (`x86_64_v4`, `x86_64_v3`, `x86_64_v2`, or `x86_64`), with `--variant` override.
 - **Checksum Verification & Idempotent Updates**: Automatically verifies `.sha256sum` and `.sha512sum` release assets before unpacking and persists `.prm-checksum`. If the latest runner is already installed and matches the upstream checksum, `prm install` and `prm update` do nothing.
 - **Runner Inspection, Removal & Purging**: Auto-sized tables show disk usage and embedded `dxvk`/`vkd3d-proton`/`nvapi`/`d7vk` versions. Remove specific runners with `prm remove <runner>` or interactively delete all unused runners not referenced in Steam's `config.vdf` with `prm purge`.
 
@@ -124,11 +123,8 @@ prm install ge
 # Install a specific version tag
 prm install ge@GE-Proton11-12
 
-# Install latest Proton-CachyOS (auto-selects x86_64_v4 / x86_64_v3 / x86_64 based on your CPU)
+# Install latest Proton-CachyOS
 prm install cachyos
-
-# Force a specific CPU micro-architecture variant
-prm install cachyos --variant v3
 
 # Check all installed runner families against upstream and install newer releases
 prm update

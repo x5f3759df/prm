@@ -15,7 +15,7 @@
 ## Codebase Layout
 - `src/main.rs` — CLI definition (`clap` derive) and command dispatch.
 - `src/runner.rs` — Subcommand handlers (`cmd_list`, `cmd_install`, `cmd_update`, `cmd_remove`, `cmd_purge`).
-- `src/sources.rs` — `runners.json` loading, CPU micro-architecture detection (`v4`/`v3`/`v2`/`x86_64`), GitHub/Gitea release API resolution.
+- `src/sources.rs` — `runners.json` loading and GitHub/Gitea release API resolution.
 - `src/archive.rs` — HTTP download with progress, SHA-256/SHA-512 verification, `.tar.{gz,tgz,xz,zst}` extraction, read-only permission cleanup.
 - `src/steam.rs` — Steam path resolution, installed runner scanning, VDF tokenizer (`compatibilitytool.vdf` and `CompatToolMapping` in `config.vdf`), table formatter.
 - `config/runners.json` — Default upstream runner sources (`ge`, `cachyos`, `em`, `tkg`, `dw`).

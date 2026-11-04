@@ -3,9 +3,8 @@ use crate::archive::{
     remove_dir_force, verify_checksum,
 };
 use crate::sources::{
-    CpuVariant, SelectedReleaseAssets, archive_stem, fetch_releases, is_supported_archive,
-    load_runners_config, parse_source_spec, resolve_release, resolve_runner_endpoint,
-    select_release_assets,
+    SelectedReleaseAssets, archive_stem, fetch_releases, load_runners_config, parse_source_spec,
+    resolve_release, resolve_runner_endpoint, select_release_assets,
 };
 use crate::steam::{
     InstalledRunner, SteamPaths, format_bytes, parse_compatibilitytool_vdf, print_table,
@@ -32,27 +31,15 @@ pub fn cmd_list(paths: &SteamPaths, remote: Option<&str>, limit: usize) -> Resul
         }
         let endpoint = resolve_runner_endpoint(&paths.config_dir, source)?;
         let releases = fetch_releases(&endpoint, limit)?;
-        let cpu = CpuVariant::detect();
-        println!(
-            "Remote releases for '{}' (host CPU level: {}):\n",
-            endpoint.key,
-            cpu.as_str()
-        );
         let mut rows = Vec::new();
         for rel in releases {
-            let best = select_release_assets(&rel, cpu).ok();
-            let (size_str, asset_name) = match best {
-                Some(b) => (format_bytes(b.archive.size), b.archive.name),
-                None => rel
-                    .assets
-                    .iter()
-                    .find(|a| is_supported_archive(&a.name))
-                    .map(|a| (format_bytes(a.size), a.name.clone()))
-                    .unwrap_or_else(|| ("-".into(), "(no x86_64 archive)".into())),
+            let (size_str, asset_name) = match select_release_assets(&rel) {
+                Ok(b) => (format_bytes(b.archive.size), b.archive.name),
+                Err(_) => ("-".into(), "(no x86_64 archive)".into()),
             };
             rows.push(vec![rel.tag_name, rel.published_at, size_str, asset_name]);
         }
-        print_table(&["TAG", "PUBLISHED", "SIZE", "BEST ASSET"], &rows);
+        print_table(&["TAG", "PUBLISHED", "SIZE", "ASSET"], &rows);
         return Ok(());
     }
 
@@ -157,21 +144,12 @@ fn check_already_installed_and_verified(
     Ok(None)
 }
 
-pub fn cmd_install(
-    paths: &SteamPaths,
-    spec: &str,
-    variant_override: Option<&str>,
-    force: bool,
-) -> Result<String, String> {
+pub fn cmd_install(paths: &SteamPaths, spec: &str, force: bool) -> Result<String, String> {
     let (source, version) = parse_source_spec(spec);
     let endpoint = resolve_runner_endpoint(&paths.config_dir, &source)?;
-    let cpu = match variant_override {
-        Some(v) => CpuVariant::parse(v)?,
-        None => CpuVariant::detect(),
-    };
 
     let release = resolve_release(&endpoint, version.as_deref())?;
-    let selected = select_release_assets(&release, cpu)?;
+    let selected = select_release_assets(&release)?;
 
     if !force && let Some(existing_name) = check_already_installed_and_verified(paths, &selected)? {
         println!(
@@ -182,11 +160,8 @@ pub fn cmd_install(
     }
 
     eprintln!(
-        "Resolved {} -> {} (asset: {}, CPU target: {})",
-        spec,
-        selected.tag_name,
-        selected.archive.name,
-        cpu.as_str()
+        "Resolved {} -> {} (asset: {})",
+        spec, selected.tag_name, selected.archive.name
     );
 
     let cache_downloads = paths.cache_dir.join("downloads");
@@ -259,11 +234,10 @@ pub fn cmd_update(paths: &SteamPaths, source_filter: Option<&str>) -> Result<(),
         return Ok(());
     }
 
-    let cpu = CpuVariant::detect();
     for family in families {
         let endpoint = resolve_runner_endpoint(&paths.config_dir, &family)?;
         let latest = resolve_release(&endpoint, None)?;
-        let selected = select_release_assets(&latest, cpu)?;
+        let selected = select_release_assets(&latest)?;
 
         if let Some(existing_name) = check_already_installed_and_verified(paths, &selected)? {
             println!(
@@ -275,12 +249,7 @@ pub fn cmd_update(paths: &SteamPaths, source_filter: Option<&str>) -> Result<(),
                 "{}: new or unverified release {} -> installing...",
                 family, latest.tag_name
             );
-            cmd_install(
-                paths,
-                &format!("{}@{}", family, latest.tag_name),
-                None,
-                false,
-            )?;
+            cmd_install(paths, &format!("{}@{}", family, latest.tag_name), false)?;
         }
     }
 

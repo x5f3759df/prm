@@ -35,10 +35,6 @@ enum Commands {
         /// Source and optional version tag: e.g., `ge`, `cachyos`, `em`, `ge@GE-Proton10-1`
         spec: String,
 
-        /// Override CPU micro-architecture variant (v4, v3, v2, x86_64)
-        #[arg(long)]
-        variant: Option<String>,
-
         /// Force reinstall even if already installed and verified
         #[arg(short, long)]
         force: bool,
@@ -67,11 +63,7 @@ fn run() -> Result<(), String> {
 
     match cli.command {
         Commands::List { remote, limit } => runner::cmd_list(&paths, remote.as_deref(), limit),
-        Commands::Install {
-            spec,
-            variant,
-            force,
-        } => runner::cmd_install(&paths, &spec, variant.as_deref(), force).map(|_| ()),
+        Commands::Install { spec, force } => runner::cmd_install(&paths, &spec, force).map(|_| ()),
         Commands::Update { source } => runner::cmd_update(&paths, source.as_deref()),
         Commands::Remove { runners } => runner::cmd_remove(&paths, &runners),
         Commands::Purge => runner::cmd_purge(&paths),
