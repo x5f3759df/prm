@@ -45,15 +45,20 @@ sudo apt install cargo rustc build-essential
 
 ---
 
-## Building & Installation
+## Installation & Building
 
-### 1. Build Release Binary
+### Quick Install (Prebuilt Binary)
+Installs `prm` to `~/.local/bin/prm` and default config to `~/.config/prm/runners.json`:
+```bash
+curl -fsSL https://raw.githubusercontent.com/x5f3759df/prm/main/install.sh | sh
+```
+
+### Build from Source
 ```bash
 cargo build --release
 ```
 The compiled binary is placed at `./target/release/prm`.
 
-### 2. Install Binary & Configs for Your User
 ```bash
 # Install binary to ~/.cargo/bin/prm (or copy to ~/.local/bin/prm)
 cargo install --path .
