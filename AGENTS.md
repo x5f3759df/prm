@@ -34,3 +34,8 @@ cargo fmt --check
 cargo clippy --all-targets -- -D warnings
 cargo test
 ```
+
+## Git & Security Workflow
+- **Pre-Commit Secret Check**: Always inspect `git diff --cached` before committing to ensure zero secrets, tokens, passwords, private keys, or sensitive local data are staged.
+- **Commit Locally Only**: Commit changes locally and present the commit/diff to the user for review.
+- **Never Push**: NEVER run `git push`. The user pushes all changes manually.
