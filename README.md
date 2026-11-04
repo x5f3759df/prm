@@ -1,6 +1,6 @@
 # `prm` — Proton Runner Manager
 
-I needed a tool that can manage proton runners all in one place. I don't found one which satisfy my needs, so I vibecoded it itself. Feel free to use, open issues and improve it. Tool should use KISS and YAGNI principles, any bloat will be rejected.
+I needed a tool to manage Proton runners all in one place. I couldn't find one that satisfied my needs, so I vibecoded it myself. Feel free to use it, open issues, and improve it. This tool strictly follows KISS and YAGNI principles—any bloat will be rejected.
 
 ## Install
 
