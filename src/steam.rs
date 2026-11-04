@@ -226,8 +226,7 @@ pub fn tokenize_vdf(input: &str) -> Vec<String> {
                 } else if bytes[i] == b'"' {
                     i += 1;
                     break;
-                } else {
-                    let ch = input[i..].chars().next().unwrap();
+                } else if let Some(ch) = input[i..].chars().next() {
                     s.push(ch);
                     i += ch.len_utf8() - 1;
                 }
