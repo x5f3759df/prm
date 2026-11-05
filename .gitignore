@@ -25,3 +25,7 @@ rustc-ice-*.txt
 
 # Graphify local output
 /graphify-out/
+
+# C build artifacts
+/build/
+/prm
