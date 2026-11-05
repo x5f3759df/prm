@@ -13,7 +13,7 @@
 - **No hardcoded upstream URLs**: All runner release endpoints live in `config/runners.json`.
 
 ## Codebase Layout
-- `src/main.rs` — CLI definition (`clap` derive) and command dispatch.
+- `src/main.rs` — CLI argument parser (`std::env::args`) and command dispatch.
 - `src/runner.rs` — Subcommand handlers (`cmd_list`, `cmd_install`, `cmd_update`, `cmd_remove`, `cmd_purge`).
 - `src/sources.rs` — `runners.json` loading and GitHub/Gitea release API resolution.
 - `src/archive.rs` — HTTP download with progress, SHA-256/SHA-512 verification, `.tar.{gz,tgz,xz,zst}` extraction, read-only permission cleanup.
