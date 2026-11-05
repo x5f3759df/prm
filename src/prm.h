@@ -11,7 +11,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define PRM_VERSION "0.3.0"
+#define PRM_VERSION "0.4.0"
 #define PATH_MAX_LEN 4096
 
 typedef struct {

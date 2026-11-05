@@ -1,3 +1,4 @@
+VERSION = 0.4.0
 CC      ?= cc
 CFLAGS  ?= -Os -flto -ffunction-sections -fdata-sections -fno-unwind-tables -fno-asynchronous-unwind-tables
 LDFLAGS ?= -flto -Wl,--gc-sections -s
@@ -48,7 +49,7 @@ BUILD_DIR = build
 PRM_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(PRM_SRCS))
 VENDOR_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(VENDOR_SRCS))
 
-.PHONY: all static test clean
+.PHONY: all static release test clean
 
 all: prm
 
@@ -66,6 +67,15 @@ prm: $(PRM_OBJS) $(VENDOR_OBJS)
 static:
 	$(MAKE) clean
 	$(MAKE) CC="$(shell which musl-gcc 2>/dev/null || echo /tmp/musl/bin/musl-gcc)" LDFLAGS="-static -flto -Wl,--gc-sections -s" prm
+
+release: static
+	rm -rf $(BUILD_DIR)/pkg prm-v$(VERSION)-x86_64-linux.zip
+	mkdir -p $(BUILD_DIR)/pkg/prm/config
+	cp prm $(BUILD_DIR)/pkg/prm/prm
+	cp config/runners.json $(BUILD_DIR)/pkg/prm/config/runners.json
+	cp README.md LICENSE $(BUILD_DIR)/pkg/prm/
+	cd $(BUILD_DIR)/pkg && zip -qr9 $(CURDIR)/prm-v$(VERSION)-x86_64-linux.zip prm
+	rm -rf $(BUILD_DIR)/pkg
 
 test: $( filter-out $(BUILD_DIR)/src/main.o, $(PRM_OBJS) ) $(VENDOR_OBJS)
 	$(CC) $(CFLAGS) -std=c11 -Wall -Wextra -Werror $(INCLUDES) $(VENDOR_DEFS) \
