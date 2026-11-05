@@ -336,7 +336,7 @@ int cmd_update(const struct prm_paths *paths, const char *source_filter) {
     free(sources);
 
     if (family_count == 0) {
-        printf("No matching installed runner families detected from %s/runners.json.\n", paths->config_dir);
+        printf("No matching installed runner families detected from %s/runners.conf.\n", paths->config_dir);
         return 0;
     }
 

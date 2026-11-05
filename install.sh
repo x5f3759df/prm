@@ -19,11 +19,11 @@ curl -fsSL "$ZIP_URL" -o "$TMP_DIR/prm.zip"
 unzip -qo "$TMP_DIR/prm.zip" -d "$TMP_DIR"
 
 install -Dm755 "$TMP_DIR/prm/prm" "$BIN_DIR/prm"
-if [ ! -f "$CFG_DIR/runners.json" ]; then
-    install -Dm644 "$TMP_DIR/prm/config/runners.json" "$CFG_DIR/runners.json"
+if [ ! -f "$CFG_DIR/runners.conf" ]; then
+    install -Dm644 "$TMP_DIR/prm/config/runners.conf" "$CFG_DIR/runners.conf"
 fi
 
-echo "Installed prm to $BIN_DIR/prm (config: $CFG_DIR/runners.json)"
+echo "Installed prm to $BIN_DIR/prm (config: $CFG_DIR/runners.conf)"
 case ":$PATH:" in
     *":$BIN_DIR:"*) ;;
     *) echo "Note: add $BIN_DIR to your PATH if not already present." ;;

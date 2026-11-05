@@ -7,7 +7,7 @@ I needed a tool to manage Proton runners all in one place. I couldn't find one t
 ```bash
 curl -fsSL https://raw.githubusercontent.com/x5f3759df/prm/main/install.sh | sh
 ```
-Installs `prm` to `~/.local/bin/prm` and default config to `~/.config/prm/runners.json`.
+Installs `prm` to `~/.local/bin/prm` and default config to `~/.config/prm/runners.conf`.
 
 <details>
 <summary>Build from source (requires C11 compiler + make)</summary>
@@ -15,7 +15,7 @@ Installs `prm` to `~/.local/bin/prm` and default config to `~/.config/prm/runner
 ```bash
 make            # or `make static` (requires musl-gcc) for a ~295 KB static binary
 install -Dm755 prm ~/.local/bin/prm
-mkdir -p ~/.config/prm && cp config/runners.json ~/.config/prm/
+mkdir -p ~/.config/prm && cp config/runners.conf ~/.config/prm/
 ```
 </details>
 
@@ -33,20 +33,13 @@ prm purge                       # Remove unused runners not in Steam's config.vd
 
 > **Note**: Select a newly installed runner in Steam (`Settings -> Compatibility` or per-game `Properties -> Compatibility`) before running `prm purge` so Steam records it in `config.vdf`.
 
-## Configuration (`~/.config/prm/runners.json`)
+## Configuration (`~/.config/prm/runners.conf`)
 
-Default sources: `ge` (GE-Proton), `cachyos` (Proton-CachyOS), `em` (Proton-EM), `dw` (DW-Proton), `tkg` (Wine-TKG). Add or edit sources in `~/.config/prm/runners.json`:
+Default sources: `ge` (GE-Proton), `cachyos` (Proton-CachyOS), `em` (Proton-EM), `dw` (DW-Proton), `tkg` (Wine-TKG). Add or edit sources in `~/.config/prm/runners.conf`:
 
-```json
-{
-  "runners": {
-    "ge": {
-      "aliases": ["ge-proton", "proton-ge"],
-      "installed_prefix": "GE-Proton",
-      "releases_url": "https://api.github.com/repos/GloriousEggroll/proton-ge-custom/releases"
-    }
-  }
-}
+```conf
+# id      aliases               prefix          releases_url
+ge        ge-proton,proton-ge   GE-Proton       https://api.github.com/repos/GloriousEggroll/proton-ge-custom/releases
 ```
 
 Set `GITHUB_TOKEN=<pat>` if you hit unauthenticated GitHub API rate limits.

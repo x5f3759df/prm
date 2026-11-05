@@ -1,21 +1,15 @@
 #include "prm.h"
 #include "yyjson.h"
 
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
 
 static const char RUNNERS_FORMAT_HINT[] =
-    "{\n"
-    "  \"runners\": {\n"
-    "    \"<short_name>\": {\n"
-    "      \"aliases\": [\"<optional_alias>\"],\n"
-    "      \"installed_prefix\": \"<optional_folder_prefix>\",\n"
-    "      \"releases_url\": \"<full_releases_api_url>\"\n"
-    "    }\n"
-    "  }\n"
-    "}";
+    "# id      aliases               prefix          releases_url\n"
+    "ge        ge-proton,proton-ge   GE-Proton       https://api.github.com/repos/GloriousEggroll/proton-ge-custom/releases";
 
 static bool ends_with_ci(const char *str, const char *suffix) {
     size_t slen = strlen(str);
@@ -34,74 +28,70 @@ int load_runners_config(const char *config_dir, struct prm_source **out_sources,
     *out_count = 0;
 
     char path[PATH_MAX_LEN];
-    snprintf(path, sizeof(path), "%s/runners.json", config_dir);
-    if (!path_exists(path)) {
+    snprintf(path, sizeof(path), "%s/runners.conf", config_dir);
+    FILE *f = fopen(path, "r");
+    if (!f) {
         return prm_err("Missing runner configuration file at: %s\n"
-                       "Create `%s` with the following JSON format:\n%s",
+                       "Create `%s` with the following format:\n%s",
                        path, path, RUNNERS_FORMAT_HINT);
     }
 
-    size_t raw_len = 0;
-    char *raw = read_file_str(path, &raw_len);
-    if (!raw) {
-        return prm_err("Failed to read %s", path);
-    }
+    struct prm_source *items = NULL;
+    size_t count = 0, cap = 0;
+    char line[1024];
 
-    yyjson_read_err jerr;
-    yyjson_doc *doc = yyjson_read_opts(raw, raw_len, 0, NULL, &jerr);
-    free(raw);
-    if (!doc) {
-        return prm_err("Invalid JSON in %s: %s\nExpected format:\n%s",
-                       path, jerr.msg ? jerr.msg : "parse error", RUNNERS_FORMAT_HINT);
-    }
+    while (fgets(line, sizeof(line), f)) {
+        char *p = line;
+        while (*p && isspace((unsigned char)*p)) p++;
+        if (*p == '\0' || *p == '#') continue;
 
-    yyjson_val *runners = yyjson_obj_get(yyjson_doc_get_root(doc), "runners");
-    size_t n = yyjson_is_obj(runners) ? yyjson_obj_size(runners) : 0;
-    if (n == 0) {
-        yyjson_doc_free(doc);
-        return prm_err("Configuration file %s has an empty `runners` map.\nExpected format:\n%s",
-                       path, RUNNERS_FORMAT_HINT);
-    }
-
-    struct prm_source *items = calloc(n, sizeof(*items));
-    if (!items) {
-        yyjson_doc_free(doc);
-        return prm_err("Out of memory");
-    }
-
-    size_t idx = 0, max = 0, count = 0;
-    yyjson_val *key_val, *entry_val;
-    yyjson_obj_foreach(runners, idx, max, key_val, entry_val) {
-        const char *k = yyjson_get_str(key_val);
-        const char *url = yyjson_get_str(yyjson_obj_get(entry_val, "releases_url"));
-        if (!k || !url || (strncmp(url, "https://", 8) != 0 && strncmp(url, "http://", 7) != 0)) {
+        char *save = NULL;
+        char *key = strtok_r(p, " \t\r\n", &save);
+        char *aliases = strtok_r(NULL, " \t\r\n", &save);
+        char *prefix = strtok_r(NULL, " \t\r\n", &save);
+        char *url = strtok_r(NULL, " \t\r\n", &save);
+        if (!key || !aliases || !prefix || !url ||
+            (strncmp(url, "https://", 8) != 0 && strncmp(url, "http://", 7) != 0)) {
             free(items);
-            yyjson_doc_free(doc);
-            return prm_err("Invalid `releases_url` for '%s' in %s: must be a full http(s) URL",
-                           k ? k : "?", path);
+            fclose(f);
+            return prm_err("Invalid entry in %s (expected: <id> <aliases|-> <prefix|-> <releases_url>):\n%s",
+                           path, RUNNERS_FORMAT_HINT);
+        }
+
+        if (count == cap) {
+            size_t ncap = cap ? cap * 2 : 8;
+            struct prm_source *nitems = realloc(items, ncap * sizeof(*items));
+            if (!nitems) {
+                free(items);
+                fclose(f);
+                return prm_err("Out of memory");
+            }
+            items = nitems;
+            cap = ncap;
         }
 
         struct prm_source *it = &items[count++];
-        snprintf(it->key, sizeof(it->key), "%s", k);
+        memset(it, 0, sizeof(*it));
+        snprintf(it->key, sizeof(it->key), "%s", key);
         snprintf(it->releases_url, sizeof(it->releases_url), "%s", url);
-
-        const char *pfx = yyjson_get_str(yyjson_obj_get(entry_val, "installed_prefix"));
-        if (pfx) snprintf(it->installed_prefix, sizeof(it->installed_prefix), "%s", pfx);
-
-        yyjson_val *aliases = yyjson_obj_get(entry_val, "aliases");
-        if (yyjson_is_arr(aliases)) {
-            size_t a_idx = 0, a_max = 0;
-            yyjson_val *av;
-            yyjson_arr_foreach(aliases, a_idx, a_max, av) {
-                const char *astr = yyjson_get_str(av);
-                if (astr && it->alias_count < 8) {
-                    snprintf(it->aliases[it->alias_count++], sizeof(it->aliases[0]), "%s", astr);
-                }
+        if (strcmp(prefix, "-") != 0) {
+            snprintf(it->installed_prefix, sizeof(it->installed_prefix), "%s", prefix);
+        }
+        if (strcmp(aliases, "-") != 0) {
+            char *asave = NULL;
+            for (char *a = strtok_r(aliases, ",", &asave); a && it->alias_count < 8; a = strtok_r(NULL, ",", &asave)) {
+                if (*a) snprintf(it->aliases[it->alias_count++], sizeof(it->aliases[0]), "%s", a);
             }
         }
     }
+    fclose(f);
 
-    yyjson_doc_free(doc);
+    if (count == 0) {
+        free(items);
+        return prm_err("Configuration file %s has no runner entries.\nExpected format:\n%s",
+                       path, RUNNERS_FORMAT_HINT);
+    }
+
     qsort(items, count, sizeof(*items), cmp_source);
     *out_sources = items;
     *out_count = count;
@@ -134,7 +124,7 @@ int resolve_runner_endpoint(const char *config_dir, const char *query, struct pr
         if (w > 0 && pos + (size_t)w < sizeof(avail)) pos += (size_t)w;
     }
     free(items);
-    return prm_err("Runner source '%s' not found in %s/runners.json. Configured sources: %s",
+    return prm_err("Runner source '%s' not found in %s/runners.conf. Configured sources: %s",
                    query, config_dir, avail);
 }
 

@@ -12,7 +12,7 @@ static void test_missing_config(void) {
     int rc = load_runners_config("/tmp/prm-definitely-missing-config-dir-99999", &sources, &count);
     assert(rc != 0);
     assert(strstr(prm_err_str(), "Missing runner configuration file") != NULL);
-    assert(strstr(prm_err_str(), "\"releases_url\"") != NULL);
+    assert(strstr(prm_err_str(), "releases_url") != NULL);
 }
 
 static void test_repo_config_valid(void) {
@@ -104,9 +104,9 @@ static void test_vdf_parsers(void) {
 
 static void test_sha256_and_sha512(void) {
     char hex256[160] = {0}, hex512[160] = {0};
-    assert(compute_file_checksum("config/runners.json", true, hex256, sizeof(hex256)) == 0);
+    assert(compute_file_checksum("config/runners.conf", true, hex256, sizeof(hex256)) == 0);
     assert(strlen(hex256) == 64);
-    assert(compute_file_checksum("config/runners.json", false, hex512, sizeof(hex512)) == 0);
+    assert(compute_file_checksum("config/runners.conf", false, hex512, sizeof(hex512)) == 0);
     assert(strlen(hex512) == 128);
 }
 

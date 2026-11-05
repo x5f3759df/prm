@@ -72,7 +72,7 @@ release: static
 	rm -rf $(BUILD_DIR)/pkg prm-v$(VERSION)-x86_64-linux.zip
 	mkdir -p $(BUILD_DIR)/pkg/prm/config
 	cp prm $(BUILD_DIR)/pkg/prm/prm
-	cp config/runners.json $(BUILD_DIR)/pkg/prm/config/runners.json
+	cp config/runners.conf $(BUILD_DIR)/pkg/prm/config/runners.conf
 	cp README.md LICENSE $(BUILD_DIR)/pkg/prm/
 	cd $(BUILD_DIR)/pkg && zip -qr9 $(CURDIR)/prm-v$(VERSION)-x86_64-linux.zip prm
 	rm -rf $(BUILD_DIR)/pkg
