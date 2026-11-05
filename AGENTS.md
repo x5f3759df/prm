@@ -25,9 +25,9 @@
 - `config/runners.json` — Default upstream runner sources (`ge`, `cachyos`, `em`, `tkg`, `dw`).
 
 ## C Coding Rules
-- **Standard & Warnings**: C11 (`-std=c11`). Must pass `-Wall -Wextra -Werror` with zero warnings on `src/` and `tests/`.
-- **Error Handling**: Return `0` on success, `-1` on failure, writing actionable context (file path or URL that failed) into `char *err, size_t err_cap`.
-- **Bounds & Memory Safety**: Use `snprintf` for bounded writes, validate tar paths against directory traversal, and free heap allocations on all return paths.
+- **Standard & Warnings**: C11 (`-std=c11`), `snake_case` structs (`struct prm_*`) and functions. Must pass `-Wall -Wextra -Werror` with zero warnings on `src/` and `tests/`.
+- **Error Handling**: Return `0` on success, `prm_err("...")` (`-1`) on failure with actionable context (file path or URL that failed), retrieved via `prm_err_str()`.
+- **Bounds & Memory Safety**: Use `snprintf` for bounded writes, POSIX `nftw()` for directory traversal, validate tar paths against directory traversal, and free heap allocations on all return paths.
 
 ## Verification Gate
 Run before finishing any change:

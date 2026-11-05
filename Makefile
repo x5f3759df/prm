@@ -65,8 +65,8 @@ prm: $(PRM_OBJS) $(VENDOR_OBJS)
 	$(CC) $(CFLAGS) $(PRM_OBJS) $(VENDOR_OBJS) $(LDFLAGS) -o $@
 
 static:
-	$(MAKE) clean
-	$(MAKE) CC="$(shell which musl-gcc 2>/dev/null || echo /tmp/musl/bin/musl-gcc)" LDFLAGS="-static -flto -Wl,--gc-sections -s" prm
+	$(MAKE) BUILD_DIR=build-static CC="$(shell which musl-gcc 2>/dev/null || echo /tmp/musl/bin/musl-gcc)" LDFLAGS="-static -flto -Wl,--gc-sections -s" prm
+	rm -rf build-static
 
 release: static
 	rm -rf $(BUILD_DIR)/pkg prm-v$(VERSION)-x86_64-linux.zip
@@ -77,7 +77,7 @@ release: static
 	cd $(BUILD_DIR)/pkg && zip -qr9 $(CURDIR)/prm-v$(VERSION)-x86_64-linux.zip prm
 	rm -rf $(BUILD_DIR)/pkg
 
-test: $( filter-out $(BUILD_DIR)/src/main.o, $(PRM_OBJS) ) $(VENDOR_OBJS)
+test: $(filter-out $(BUILD_DIR)/src/main.o,$(PRM_OBJS)) $(VENDOR_OBJS)
 	$(CC) $(CFLAGS) -std=c11 -Wall -Wextra -Werror $(INCLUDES) $(VENDOR_DEFS) \
 		tests/test_prm.c $(filter-out $(BUILD_DIR)/src/main.o,$(PRM_OBJS)) $(VENDOR_OBJS) $(LDFLAGS) -o $(BUILD_DIR)/test_prm
 	./$(BUILD_DIR)/test_prm
