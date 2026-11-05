@@ -10,10 +10,11 @@ curl -fsSL https://raw.githubusercontent.com/x5f3759df/prm/main/install.sh | sh
 Installs `prm` to `~/.local/bin/prm` and default config to `~/.config/prm/runners.json`.
 
 <details>
-<summary>Build from source (requires Rust >= 1.85)</summary>
+<summary>Build from source (requires C11 compiler + make)</summary>
 
 ```bash
-cargo install --path .
+make            # or `make static` (requires musl-gcc) for a ~295 KB static binary
+install -Dm755 prm ~/.local/bin/prm
 mkdir -p ~/.config/prm && cp config/runners.json ~/.config/prm/
 ```
 </details>
