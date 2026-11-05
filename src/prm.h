@@ -11,7 +11,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define PRM_VERSION "0.4.0"
+#define PRM_VERSION "0.5.0"
 #define PATH_MAX_LEN 4096
 
 #if defined(__GNUC__) || defined(__clang__)

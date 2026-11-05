@@ -1,4 +1,4 @@
-VERSION = 0.4.0
+VERSION = 0.5.0
 CC      ?= cc
 CFLAGS  ?= -Os -flto -ffunction-sections -fdata-sections -fno-unwind-tables -fno-asynchronous-unwind-tables
 LDFLAGS ?= -flto -Wl,--gc-sections -s
